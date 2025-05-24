@@ -141,8 +141,8 @@ class ApiService {
     });
   }
 
-  async cancelBooking(id: string) {
-    return this.request<Booking>(`/api/bookings/${id}/cancel`, {
+  async cancelBooking(ticketId: string): Promise<ApiResponse<Ticket>> {
+    return this.request<Ticket>(`/api/tickets/${ticketId}/cancel`, {
       method: 'PATCH',
     });
   }

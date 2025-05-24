@@ -14,7 +14,8 @@ import {
   Clock,
   CheckCircle,
   Download,
-  QrCode
+  QrCode,
+  XCircle
 } from 'lucide-react';
 import { Ticket as TicketType } from '@/types';
 import {
@@ -31,6 +32,7 @@ export default function MyTickets() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     loadTickets();
@@ -84,6 +86,28 @@ export default function MyTickets() {
     }
   };
 
+  const handleCancelBooking = async (ticketId: string) => {
+    setCancelling(ticketId);
+    try {
+      const response = await apiService.cancelBooking(ticketId);
+      if (response.success) {
+        toast({
+          title: 'Booking Cancelled',
+          description: 'Your booking has been cancelled successfully.',
+        });
+        await loadTickets(); // Refresh the list
+      }
+    } catch (error) {
+      toast({
+        title: 'Cancellation Failed',
+        description: 'Failed to cancel booking. Please try again or contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCancelling(null);
+    }
+  };
+
   const handleDownloadBoardingPass = (ticket: TicketType) => {
     // In a real app, this would generate and download a PDF boarding pass
     toast({
@@ -126,6 +150,20 @@ export default function MyTickets() {
       hoursUntilDeparture >= 1 && // Can check in 24 hours before, but not less than 1 hour
       hoursUntilDeparture <= 24 &&
       ticket.booking.flight.status === 'SCHEDULED'
+    );
+  };
+
+  const canCancelBooking = (ticket: TicketType) => {
+    if (!ticket.booking?.flight) return false;
+    
+    const now = new Date();
+    const departureTime = new Date(ticket.booking.flight.departureTime);
+    const timeDifference = departureTime.getTime() - now.getTime();
+    const hoursUntilDeparture = timeDifference / (1000 * 60 * 60);
+    
+    return (
+      (ticket.status === 'CONFIRMED' || ticket.status === 'ISSUED') &&
+      hoursUntilDeparture >= 24 // Can cancel up to 24 hours before departure
     );
   };
 
@@ -263,6 +301,17 @@ export default function MyTickets() {
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         {checkingIn === ticket.id ? 'Checking In...' : 'Check In'}
+                      </Button>
+                    )}
+                    
+                    {canCancelBooking(ticket) && (
+                      <Button
+                        onClick={() => handleCancelBooking(ticket.id)}
+                        disabled={cancelling === ticket.id}
+                        variant="destructive"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        {cancelling === ticket.id ? 'Cancelling...' : 'Cancel Booking'}
                       </Button>
                     )}
                     
