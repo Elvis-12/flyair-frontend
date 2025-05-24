@@ -165,7 +165,7 @@ export default function MyBookings() {
                     </div>
                     <div>
                       <CardTitle className="text-lg">{booking.flight.flightNumber}</CardTitle>
-                      <CardDescription>Booking #{booking.id.slice(-8)}</CardDescription>
+                      <CardDescription>Booking #{String(booking.id).slice(-8)}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">

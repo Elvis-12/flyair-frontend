@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,16 @@ export default function MyTickets() {
     try {
       const response = await apiService.getMyTickets();
       if (response.success) {
-        setTickets(response.data);
+        // Transform the data to match our frontend interface
+        const transformedTickets = response.data.map((ticket: any) => ({
+          ...ticket,
+          status: ticket.ticketStatus, // Map ticketStatus to status
+          booking: {
+            ...ticket.flightSeat?.flight,
+            flight: ticket.flightSeat?.flight
+          }
+        }));
+        setTickets(transformedTickets);
       }
     } catch (error) {
       toast({
@@ -85,15 +93,16 @@ export default function MyTickets() {
   };
 
   const filteredTickets = tickets.filter(ticket =>
-    ticket.booking.flight.flightNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.booking.flight.departureAirport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.booking.flight.arrivalAirport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.passengerName.toLowerCase().includes(searchTerm.toLowerCase())
+    (ticket.booking?.flight?.flightNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    ticket.booking?.flight?.departureAirport?.airportCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.booking?.flight?.arrivalAirport?.airportCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.passengerName?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: TicketType['status']) => {
     switch (status) {
       case 'CONFIRMED':
+      case 'ISSUED':
         return 'bg-yellow-100 text-yellow-800';
       case 'CHECKED_IN':
         return 'bg-green-100 text-green-800';
@@ -105,13 +114,15 @@ export default function MyTickets() {
   };
 
   const canCheckIn = (ticket: TicketType) => {
+    if (!ticket.booking?.flight) return false;
+    
     const now = new Date();
     const departureTime = new Date(ticket.booking.flight.departureTime);
     const timeDifference = departureTime.getTime() - now.getTime();
     const hoursUntilDeparture = timeDifference / (1000 * 60 * 60);
     
     return (
-      ticket.status === 'CONFIRMED' &&
+      (ticket.status === 'CONFIRMED' || ticket.status === 'ISSUED') &&
       hoursUntilDeparture >= 1 && // Can check in 24 hours before, but not less than 1 hour
       hoursUntilDeparture <= 24 &&
       ticket.booking.flight.status === 'SCHEDULED'
@@ -165,12 +176,12 @@ export default function MyTickets() {
                       <Ticket className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{ticket.booking.flight.flightNumber}</CardTitle>
-                      <CardDescription>Ticket #{ticket.id.slice(-8)}</CardDescription>
+                      <CardTitle className="text-lg">{ticket.booking?.flight?.flightNumber || 'Flight information unavailable'}</CardTitle>
+                      <CardDescription>Ticket #{String(ticket.id).slice(-8)}</CardDescription>
                     </div>
                   </div>
                   <Badge className={getStatusColor(ticket.status)}>
-                    {ticket.status.replace('_', ' ')}
+                    {ticket.status === 'ISSUED' ? 'CONFIRMED' : (ticket.status || 'UNKNOWN').replace('_', ' ')}
                   </Badge>
                 </div>
               </CardHeader>
@@ -182,15 +193,15 @@ export default function MyTickets() {
                       <MapPin className="h-4 w-4" />
                       <span>From</span>
                     </div>
-                    <p className="font-medium">{ticket.booking.flight.departureAirport}</p>
+                    <p className="font-medium">{ticket.booking?.flight?.departureAirport?.airportCode || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
-                      {new Date(ticket.booking.flight.departureTime).toLocaleDateString()}
+                      {ticket.booking?.flight?.departureTime ? new Date(ticket.booking.flight.departureTime).toLocaleDateString() : 'N/A'}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {new Date(ticket.booking.flight.departureTime).toLocaleTimeString([], { 
+                      {ticket.booking?.flight?.departureTime ? new Date(ticket.booking.flight.departureTime).toLocaleTimeString([], { 
                         hour: '2-digit', 
                         minute: '2-digit' 
-                      })}
+                      }) : 'N/A'}
                     </p>
                   </div>
                   
@@ -199,15 +210,15 @@ export default function MyTickets() {
                       <MapPin className="h-4 w-4" />
                       <span>To</span>
                     </div>
-                    <p className="font-medium">{ticket.booking.flight.arrivalAirport}</p>
+                    <p className="font-medium">{ticket.booking?.flight?.arrivalAirport?.airportCode || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
-                      {new Date(ticket.booking.flight.arrivalTime).toLocaleDateString()}
+                      {ticket.booking?.flight?.arrivalTime ? new Date(ticket.booking.flight.arrivalTime).toLocaleDateString() : 'N/A'}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {new Date(ticket.booking.flight.arrivalTime).toLocaleTimeString([], { 
+                      {ticket.booking?.flight?.arrivalTime ? new Date(ticket.booking.flight.arrivalTime).toLocaleTimeString([], { 
                         hour: '2-digit', 
                         minute: '2-digit' 
-                      })}
+                      }) : 'N/A'}
                     </p>
                   </div>
                   
@@ -230,12 +241,14 @@ export default function MyTickets() {
                       <Clock className="h-4 w-4" />
                       <span>Flight Info</span>
                     </div>
-                    <p className="font-medium">{ticket.booking.flight.aircraft}</p>
+                    <p className="font-medium">{ticket.booking?.flight?.aircraft || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
-                      Duration: {Math.round(
-                        (new Date(ticket.booking.flight.arrivalTime).getTime() - 
-                         new Date(ticket.booking.flight.departureTime).getTime()) / (1000 * 60 * 60)
-                      )}h
+                      {ticket.booking?.flight?.departureTime && ticket.booking?.flight?.arrivalTime ? 
+                        `Duration: ${Math.round(
+                          (new Date(ticket.booking.flight.arrivalTime).getTime() - 
+                           new Date(ticket.booking.flight.departureTime).getTime()) / (1000 * 60 * 60)
+                        )}h` : 'N/A'
+                      }
                     </p>
                   </div>
                 </div>
@@ -284,7 +297,7 @@ export default function MyTickets() {
                             <QrCode className="h-24 w-24 text-gray-400" />
                           </div>
                           <p className="text-sm text-gray-600 mt-4">
-                            Flight: {ticket.booking.flight.flightNumber}<br />
+                            Flight: {ticket.booking?.flight?.flightNumber || 'Flight information unavailable'}<br />
                             Seat: {ticket.seatNumber}<br />
                             Gate: A12 (Check airport displays)
                           </p>
@@ -294,10 +307,10 @@ export default function MyTickets() {
                   )}
                 </div>
                 
-                {ticket.status === 'CONFIRMED' && !canCheckIn(ticket) && (
+                {(ticket.status === 'CONFIRMED' || ticket.status === 'ISSUED') && !canCheckIn(ticket) && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      {new Date(ticket.booking.flight.departureTime) > new Date() 
+                      {new Date(ticket.booking?.flight?.departureTime) > new Date() 
                         ? 'Check-in will be available 24 hours before departure'
                         : 'Check-in is no longer available for this flight'
                       }

@@ -48,7 +48,7 @@ export interface Ticket {
   bookingId: string;
   passengerName: string;
   seatNumber: string;
-  status: 'CONFIRMED' | 'CHECKED_IN' | 'BOARDED';
+  status: 'CONFIRMED' | 'CHECKED_IN' | 'BOARDED' | 'ISSUED';
   checkInTime?: string;
   boardingTime?: string;
   booking: Booking;

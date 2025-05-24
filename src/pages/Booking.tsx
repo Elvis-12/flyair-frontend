@@ -80,8 +80,13 @@ export default function Booking() {
     try {
       const response = await apiService.createBooking({
         flightId: flight.id,
-        passengerName: passengerName.trim(),
-        seatNumber: selectedSeat.seatNumber
+        flightSeatIds: [selectedSeat.id],
+        passengers: [{
+          passengerName: passengerName.trim(),
+          passengerEmail: user?.email || '',
+          passengerPhone: user?.phoneNumber || '',
+          passportNumber: '' // This should be collected from the user
+        }]
       });
       
       if (response.success) {
@@ -94,7 +99,7 @@ export default function Booking() {
     } catch (error) {
       toast({
         title: 'Booking Failed',
-        description: 'Failed to complete booking. Please try again.',
+        description: (error as any).message || (error as any).error || 'Failed to complete booking. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -186,7 +191,7 @@ export default function Booking() {
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <p className="font-medium">Selected Seat: {selectedSeat.seatNumber}</p>
                       <p className="text-sm text-gray-600">
-                        Class: {selectedSeat.class} • Additional: ${selectedSeat.price}
+                        Class: {selectedSeat.seatClass} • Additional: ${selectedSeat.price}
                       </p>
                     </div>
                   )}
@@ -344,7 +349,7 @@ export default function Booking() {
               {selectedSeat && (
                 <div className="pt-3 border-t">
                   <p className="font-medium">Selected Seat: {selectedSeat.seatNumber}</p>
-                  <p className="text-sm text-gray-600">{selectedSeat.class}</p>
+                  <p className="text-sm text-gray-600">{selectedSeat.seatClass}</p>
                 </div>
               )}
 

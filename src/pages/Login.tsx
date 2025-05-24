@@ -28,7 +28,6 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('handleSubmit triggered!');
     setLoading(true);
 
     try {
