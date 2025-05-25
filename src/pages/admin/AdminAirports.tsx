@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { MapPin, Search, Filter, Download, Plus, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Search, Filter, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Airport } from '@/types';
 
 export default function AdminAirports() {
@@ -25,6 +25,8 @@ export default function AdminAirports() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [countryFilter, setCountryFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const airportsPerPage = 4;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAirport, setEditingAirport] = useState<Airport | null>(null);
   const [formData, setFormData] = useState({
@@ -190,6 +192,16 @@ export default function AdminAirports() {
     return matchesSearch && matchesCountry;
   });
 
+  // Calculate pagination
+  const indexOfLastAirport = currentPage * airportsPerPage;
+  const indexOfFirstAirport = indexOfLastAirport - airportsPerPage;
+  const currentAirports = filteredAirports.slice(indexOfFirstAirport, indexOfLastAirport);
+  const totalPages = Math.ceil(filteredAirports.length / airportsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
   const uniqueCountries = [...new Set(airports.map(airport => airport.country))];
 
   if (loading) {
@@ -278,7 +290,7 @@ export default function AdminAirports() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAirports.map((airport) => (
+                {currentAirports.map((airport) => (
                   <TableRow key={airport.id}>
                     <TableCell className="font-mono font-bold">
                       {airport.airportCode}
@@ -312,6 +324,41 @@ export default function AdminAirports() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Showing {indexOfFirstAirport + 1} to {Math.min(indexOfLastAirport, filteredAirports.length)} of {filteredAirports.length} airports
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {[...Array(totalPages)].map((_, index) => (
+                  <Button
+                    key={index + 1}
+                    variant={currentPage === index + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(index + 1)}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

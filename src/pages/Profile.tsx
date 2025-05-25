@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/dialog';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [show2FADialog, setShow2FADialog] = useState(false);
@@ -128,7 +128,11 @@ export default function Profile() {
     try {
       const response = await apiService.enable2FA();
       if (response.success) {
-        setQrCode(response.data.qrCode);
+        console.log('Enable 2FA response:', response);
+        // Just set the QR code data URL, not the full img tag
+        console.log('Value before setting qrCode state:', response.data);
+        setQrCode(response.data);
+        console.log('qrCode state after setting:', qrCode);
         setShow2FADialog(true);
       }
     } catch (error) {
@@ -148,6 +152,8 @@ export default function Profile() {
           title: '2FA Enabled',
           description: 'Two-factor authentication has been enabled for your account.',
         });
+        // Update user state to reflect 2FA enabled status
+        updateUser();
         setShow2FADialog(false);
         setTwoFACode('');
       }
@@ -422,13 +428,21 @@ export default function Profile() {
             </DialogDescription>
           </DialogHeader>
           <div className="text-center py-4">
-            <div className="w-56 h-56 bg-gray-100 flex items-center justify-center mx-auto mb-4 rounded-lg">
-              {qrCode ? (
-                <div dangerouslySetInnerHTML={{ __html: qrCode }} />
-              ) : (
-                <Smartphone className="h-16 w-16 text-gray-400" />
-              )}
-            </div>
+            {qrCode ? (
+              <img 
+                src={qrCode} 
+                alt="QR Code" 
+                className="mx-auto mb-4 rounded-lg"
+                style={{
+                  display: 'block',
+                  width: '200px',
+                  height: '200px',
+                  border: '1px solid red'
+                }}
+              />
+            ) : (
+              <Smartphone className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            )}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="twoFACode">Enter 6-Digit Code</Label>

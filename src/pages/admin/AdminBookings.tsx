@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar, Search, Filter, Download } from 'lucide-react';
+import { Calendar, Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Booking } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -25,6 +25,8 @@ export default function AdminBookings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const bookingsPerPage = 4;
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -83,6 +85,16 @@ export default function AdminBookings() {
     const matchesStatus = statusFilter === 'ALL' || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate pagination
+  const indexOfLastBooking = currentPage * bookingsPerPage;
+  const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage;
+  const currentBookings = filteredBookings.slice(indexOfFirstBooking, indexOfLastBooking);
+  const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -180,7 +192,7 @@ export default function AdminBookings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBookings.map((booking) => (
+                {currentBookings.map((booking) => (
                   <TableRow key={booking.id}>
                     <TableCell className="font-mono text-sm">
                       {String(booking.id).substring(0, 8)}...
@@ -228,6 +240,41 @@ export default function AdminBookings() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-500">
+              Showing {indexOfFirstBooking + 1} to {Math.min(indexOfLastBooking, filteredBookings.length)} of {filteredBookings.length} bookings
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index + 1}
+                  variant={currentPage === index + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

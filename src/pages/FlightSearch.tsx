@@ -18,7 +18,7 @@ import {
   ArrowRight,
   Calendar as CalendarIcon
 } from 'lucide-react';
-import { Flight, SearchFilters } from '@/types';
+import { Flight, SearchFilters, User, Booking } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -36,15 +36,19 @@ export default function FlightSearch() {
   });
   
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [searchedFlights, setSearchedFlights] = useState<Flight[]>([]);
+  const [searchedUsers, setSearchedUsers] = useState<User[]>([]);
+  const [searchedBookings, setSearchedBookings] = useState<Booking[]>([]);
+  
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch all flights on initial load
+    // Fetch all flights on initial load (if no global search query)
     const loadAllFlights = async () => {
+      setInitialLoading(true);
       try {
-        setInitialLoading(true);
         const response = await apiService.getFlights();
         if (response.success) {
            // Handle both direct array and paginated response
@@ -73,27 +77,50 @@ export default function FlightSearch() {
       }
     };
 
-    loadAllFlights();
-  }, []); // Empty dependency array ensures this runs only once on mount
-
-  useEffect(() => {
     const query = searchParams.get('q');
     if (query) {
       performGlobalSearch(query);
+    } else {
+      loadAllFlights(); // Load all flights only if no global search query
     }
   }, [searchParams]);
 
   const performGlobalSearch = async (query: string) => {
     setSearching(true);
+    setSearchedFlights([]); // Clear previous global search results
+    setSearchedUsers([]);
+    setSearchedBookings([]);
+
     try {
+      // Assuming the backend returns an object with properties like flights, users, bookings
       const response = await apiService.globalSearch(query);
       if (response.success) {
-        setFlights(response.data.flights || []);
+        setSearchedFlights(response.data.flights || []);
+        setSearchedUsers(response.data.users || []);
+        setSearchedBookings(response.data.bookings || []);
+
+        // Optionally show a toast if no results found across all types
+        if ((response.data.flights?.length || 0) === 0 &&
+            (response.data.users?.length || 0) === 0 &&
+            (response.data.bookings?.length || 0) === 0) {
+              toast({
+                title: 'No Results Found',
+                description: `No results found for "${query}"`, 
+              });
+            }
+
+      } else {
+        toast({
+          title: 'Search Error',
+          description: response.message || 'Failed to perform global search.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
+      console.error('Global search failed:', error);
       toast({
         title: 'Search Error',
-        description: 'Failed to perform search.',
+        description: 'An unexpected error occurred during global search.',
         variant: 'destructive',
       });
     } finally {
@@ -113,6 +140,7 @@ export default function FlightSearch() {
       return;
     }
 
+    // This is the flight-specific search form, not global search
     setLoading(true);
     try {
       const response = await apiService.searchFlights(filters);
@@ -124,8 +152,15 @@ export default function FlightSearch() {
             description: 'No flights match your search criteria. Try different dates or airports.',
           });
         }
+      } else {
+         toast({
+          title: 'Search Error',
+          description: response.message || 'Failed to search flights.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
+       console.error('Flight search failed:', error);
       toast({
         title: 'Search Error',
         description: 'Failed to search flights. Please try again.',
@@ -155,14 +190,49 @@ export default function FlightSearch() {
     }
   };
 
+  const renderFlightResult = (flight: Flight) => (
+     <div key={flight.id} className="p-4 border rounded-md shadow-sm bg-white">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="font-semibold">{flight.departureAirport?.airportCode} → {flight.arrivalAirport?.airportCode}</p>
+                <p className="text-sm text-gray-600">{format(new Date(flight.departureTime), 'PPP p')} - {format(new Date(flight.arrivalTime), 'PPP p')}</p>
+            </div>
+            <Badge className={getStatusColor(flight.status)}>{flight.status}</Badge>
+        </div>
+        <p className="text-sm text-gray-500 mt-2">Flight Number: {flight.flightNumber}</p>
+        <p className="text-sm text-gray-500">Duration: {flight.durationMinutes} minutes</p>
+     </div>
+  );
+
+  const renderUserResult = (user: User) => (
+    <div key={user.id} className="p-4 border rounded-md shadow-sm bg-white flex items-center space-x-4">
+        <div className="bg-blue-100 text-blue-800 rounded-full h-10 w-10 flex items-center justify-center font-bold text-lg">
+            {user.firstName?.[0]?.toUpperCase() || 'U'}
+        </div>
+        <div>
+            <p className="font-semibold">{user.firstName} {user.lastName}</p>
+            <p className="text-sm text-gray-600">{user.email}</p>
+            <p className="text-sm text-gray-600">Role: {user.role}</p>
+        </div>
+    </div>
+  );
+
+  const renderBookingResult = (booking: Booking) => (
+     <div key={booking.id} className="p-4 border rounded-md shadow-sm bg-white">
+        <p className="font-semibold">Booking ID: {String(booking.id).substring(0, 8)}...</p>
+        <p className="text-sm text-gray-600">Passenger: {booking.passengerName}</p>
+        <p className="text-sm text-gray-600">Flight: {booking.flight?.flightNumber} ({booking.flight?.departureAirport?.airportCode} → {booking.flight?.arrivalAirport?.airportCode})</p>
+        <p className="text-sm text-gray-600">Status: {booking.status}</p>
+     </div>
+  );
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Search Flights</h1>
-        <p className="text-gray-600">Find the perfect flight for your journey</p>
+        <h1 className="text-3xl font-bold text-gray-900">Search Results</h1>
+        <p className="text-gray-600">Displaying results for your search query</p>
       </div>
 
-      {/* Search Form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -249,140 +319,70 @@ export default function FlightSearch() {
                   <SelectContent>
                     <SelectItem value="ECONOMY">Economy</SelectItem>
                     <SelectItem value="BUSINESS">Business</SelectItem>
-                    <SelectItem value="FIRST_CLASS">First Class</SelectItem>
+                    <SelectItem value="FIRST">First Class</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? 'Searching...' : 'Search Flights'}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Search Results */}
-      <div className="space-y-4">
-        {(loading || searching) && (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-        )}
-        
-        {!loading && !searching && flights.length > 0 && (
-          <>
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                {flights.length} {flights.length === 1 ? 'flight' : 'flights'} found
-              </h2>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
+      {searching ? (
+        <div className="space-y-4">
+           <Skeleton className="h-8 w-48"/>
+           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {searchedFlights.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-800">Flights Found ({searchedFlights.length})</h2>
+              <div className="space-y-4">
+                {searchedFlights.map(renderFlightResult)}
+              </div>
             </div>
-            
-            {flights.map((flight) => (
-              <Card key={flight.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <Plane className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg">{flight.flightNumber}</h3>
-                          <p className="text-sm text-gray-600">{flight.aircraft}</p>
-                        </div>
-                        <Badge className={getStatusColor(flight.status)}>
-                          {flight.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <p className="font-medium">{flight.departureAirport?.airportCode}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(flight.departureTime).toLocaleTimeString([], { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-center">
-                          <ArrowRight className="h-5 w-5 text-gray-400" />
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <p className="font-medium">{flight.arrivalAirport?.airportCode}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(flight.arrivalTime).toLocaleTimeString([], { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4" />
-                            <span>
-                              {Math.round(
-                                (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 
-                                (1000 * 60 * 60)
-                              )}h flight
-                            </span>
-                          </div>
-                          <span>{flight.availableSeats} seats available</span>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-blue-600">${flight.price}</p>
-                          <p className="text-sm text-gray-600">per person</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="ml-6">
-                      <Button 
-                        onClick={() => handleBookFlight(flight)}
-                        disabled={flight.status !== 'SCHEDULED' || flight.availableSeats === 0}
-                        className="px-8"
-                      >
-                        {flight.availableSeats === 0 ? 'Sold Out' : 'Select Flight'}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        )}
-        
-        {!loading && !searching && flights.length === 0 && searchParams.get('q') && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No flights found</h3>
-              <p className="text-gray-600">
-                No flights match your search for "{searchParams.get('q')}". Try different search terms.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          )}
+
+          {searchedUsers.length > 0 && (
+             <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-800">Users Found ({searchedUsers.length})</h2>
+               <div className="space-y-4">
+                {searchedUsers.map(renderUserResult)}
+               </div>
+             </div>
+          )}
+
+          {searchedBookings.length > 0 && (
+             <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-800">Bookings Found ({searchedBookings.length})</h2>
+               <div className="space-y-4">
+                {searchedBookings.map(renderBookingResult)}
+               </div>
+             </div>
+          )}
+
+          {!initialLoading && !loading && !searching && searchedFlights.length === 0 && searchedUsers.length === 0 && searchedBookings.length === 0 && searchParams.has('q') && (
+            <p className="text-center text-gray-600">No results found for "{searchParams.get('q')}"</p>
+          )}
+           {!initialLoading && !loading && !searching && !searchParams.has('q') && flights.length === 0 && (
+             <p className="text-center text-gray-600">Use the search bar above or the flight search form to find results.</p>
+           )}
+            {!initialLoading && !loading && !searching && !searchParams.has('q') && flights.length > 0 && (
+               <div className="space-y-4">
+                 <h2 className="text-2xl font-bold text-gray-800">All Flights</h2>
+                 <div className="space-y-4">
+                  {flights.map(renderFlightResult)}
+                 </div>
+               </div>
+            )}
+
+        </div>
+      )}
     </div>
   );
 }

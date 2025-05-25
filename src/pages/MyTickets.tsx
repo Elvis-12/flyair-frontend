@@ -15,7 +15,9 @@ import {
   CheckCircle,
   Download,
   QrCode,
-  XCircle
+  XCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Ticket as TicketType } from '@/types';
 import {
@@ -33,6 +35,8 @@ export default function MyTickets() {
   const [searchTerm, setSearchTerm] = useState('');
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ticketsPerPage = 4;
 
   useEffect(() => {
     loadTickets();
@@ -123,6 +127,16 @@ export default function MyTickets() {
     ticket.passengerName?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Calculate pagination
+  const indexOfLastTicket = currentPage * ticketsPerPage;
+  const indexOfFirstTicket = indexOfLastTicket - ticketsPerPage;
+  const currentTickets = filteredTickets.slice(indexOfFirstTicket, indexOfLastTicket);
+  const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
   const getStatusColor = (status: TicketType['status']) => {
     switch (status) {
       case 'CONFIRMED':
@@ -205,7 +219,7 @@ export default function MyTickets() {
       {/* Tickets List */}
       {filteredTickets.length > 0 ? (
         <div className="space-y-4">
-          {filteredTickets.map((ticket) => (
+          {currentTickets.map((ticket) => (
             <Card key={ticket.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -369,6 +383,43 @@ export default function MyTickets() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstTicket + 1} to {Math.min(indexOfLastTicket, filteredTickets.length)} of {filteredTickets.length} tickets
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {[...Array(totalPages)].map((_, index) => (
+                  <Button
+                    key={index + 1}
+                    variant={currentPage === index + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(index + 1)}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card>

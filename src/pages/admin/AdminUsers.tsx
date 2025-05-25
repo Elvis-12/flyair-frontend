@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Users, Search, Filter, Download, UserPlus, Edit, Shield } from 'lucide-react';
+import { Users, Search, Filter, Download, UserPlus, Edit, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { User } from '@/types';
 
 export default function AdminUsers() {
@@ -24,6 +24,8 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 4;
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -48,9 +50,9 @@ export default function AdminUsers() {
     loadUsers();
   }, []);
 
-  const handleToggleUserStatus = async (userId: string, isActive: boolean) => {
+  const handleToggleUserStatus = async (userId: number, isActive: boolean) => {
     try {
-      const response = await apiService.updateUser(userId, { isActive: !isActive });
+      const response = await apiService.updateUser(String(userId), { isActive: !isActive });
       if (response.success) {
         setUsers(users.map(user => 
           user.id === userId 
@@ -71,9 +73,9 @@ export default function AdminUsers() {
     }
   };
 
-  const handleToggleAdminRole = async (userId: string, isAdmin: boolean) => {
+  const handleToggleAdminRole = async (userId: number, isAdmin: boolean) => {
     try {
-      const response = await apiService.updateUser(userId, { role: isAdmin ? 'USER' : 'ADMIN' });
+      const response = await apiService.updateUser(String(userId), { role: isAdmin ? 'USER' : 'ADMIN' });
       if (response.success) {
         setUsers(users.map(user => 
           user.id === userId 
@@ -102,6 +104,16 @@ export default function AdminUsers() {
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  // Calculate pagination
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const getRoleBadge = (role: string) => {
     return role === 'ADMIN' ? 'default' : 'secondary';
@@ -199,7 +211,7 @@ export default function AdminUsers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {currentUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div>
@@ -256,6 +268,41 @@ export default function AdminUsers() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-500">
+              Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index + 1}
+                  variant={currentPage === index + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

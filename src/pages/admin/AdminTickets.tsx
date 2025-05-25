@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Ticket as TicketIcon, Search, Filter, Download, CheckCircle, Plane } from 'lucide-react';
+import { Ticket as TicketIcon, Search, Filter, Download, CheckCircle, Plane, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Ticket } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -25,6 +25,8 @@ export default function AdminTickets() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ticketsPerPage = 4;
 
   useEffect(() => {
     const loadTickets = async () => {
@@ -101,17 +103,45 @@ export default function AdminTickets() {
   };
 
   const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ticket.seatNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
+    console.log('Filtering ticket:', { ticketStatus: ticket.ticketStatus, statusFilter: statusFilter });
+    const matchesSearch = (ticket.passengerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (ticket.seatNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    
+    let matchesStatus = false;
+    if (statusFilter === 'ALL') {
+      matchesStatus = true;
+    } else if (statusFilter === 'CONFIRMED') {
+      // Include both CONFIRMED and ISSUED when filtering for CONFIRMED
+      matchesStatus = ticket.ticketStatus === 'CONFIRMED' || ticket.ticketStatus === 'ISSUED';
+    } else {
+      // For other statuses, perform an exact match
+      matchesStatus = ticket.ticketStatus === statusFilter;
+    }
+
     return matchesSearch && matchesStatus;
   });
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchTerm]);
+
+  // Calculate pagination
+  const indexOfLastTicket = currentPage * ticketsPerPage;
+  const indexOfFirstTicket = indexOfLastTicket - ticketsPerPage;
+  const currentTickets = filteredTickets.slice(indexOfFirstTicket, indexOfLastTicket);
+  const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
       CONFIRMED: 'default',
       CHECKED_IN: 'secondary',
-      BOARDED: 'default'
+      BOARDED: 'default',
+      CANCELLED: 'destructive'
     } as const;
     return variants[status as keyof typeof variants] || 'default';
   };
@@ -169,6 +199,7 @@ export default function AdminTickets() {
                 <SelectItem value="CONFIRMED">Confirmed</SelectItem>
                 <SelectItem value="CHECKED_IN">Checked In</SelectItem>
                 <SelectItem value="BOARDED">Boarded</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline">
@@ -203,7 +234,7 @@ export default function AdminTickets() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTickets.map((ticket) => (
+                {currentTickets.map((ticket) => (
                   <TableRow key={ticket.id}>
                     <TableCell className="font-mono text-sm">
                       {String(ticket.id).substring(0, 8)}...
@@ -215,7 +246,7 @@ export default function AdminTickets() {
                       {ticket.seatNumber}
                     </TableCell>
                     <TableCell>
-                      {ticket.flightSeat?.flight?.flightNumber}
+                      {ticket.booking?.flight?.flightNumber}
                     </TableCell>
                     <TableCell>
                       {ticket.checkInTime 
@@ -265,6 +296,41 @@ export default function AdminTickets() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-500">
+              Showing {indexOfFirstTicket + 1} to {Math.min(indexOfLastTicket, filteredTickets.length)} of {filteredTickets.length} tickets
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index + 1}
+                  variant={currentPage === index + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -19,6 +19,8 @@ import {
   MapPin,
   Clock,
   Download,
+  ChevronLeft,
+  ChevronRight,
   // Import Seat icon again if needed for the manage seats button/dialog
 } from 'lucide-react';
 import { Flight, Airport, Seat } from '@/types';
@@ -50,6 +52,8 @@ export default function AdminFlights() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const flightsPerPage = 4;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [isManageSeatsDialogOpen, setIsManageSeatsDialogOpen] = useState(false);
@@ -248,10 +252,19 @@ export default function AdminFlights() {
 
   const filteredFlights = flights.filter(flight => {
     const matchesSearch = flight.flightNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    // Ensure status comparison is correct
     const matchesStatus = statusFilter === 'ALL' || flight.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate pagination
+  const indexOfLastFlight = currentPage * flightsPerPage;
+  const indexOfFirstFlight = indexOfLastFlight - flightsPerPage;
+  const currentFlights = filteredFlights.slice(indexOfFirstFlight, indexOfLastFlight);
+  const totalPages = Math.ceil(filteredFlights.length / flightsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -356,7 +369,7 @@ export default function AdminFlights() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredFlights.map((flight) => (
+                {currentFlights.map((flight) => (
                   <TableRow key={flight.id}>
                     <TableCell className="font-medium">
                       {flight.flightNumber}
@@ -406,6 +419,41 @@ export default function AdminFlights() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-500">
+              Showing {indexOfFirstFlight + 1} to {Math.min(indexOfLastFlight, filteredFlights.length)} of {filteredFlights.length} flights
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index + 1}
+                  variant={currentPage === index + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

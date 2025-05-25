@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Armchair, Search, Filter, Download, Plus, Edit, Trash2 } from 'lucide-react';
+import { Armchair, Search, Filter, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Seat, Flight } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,6 +29,8 @@ export default function AdminSeats() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const seatsPerPage = 4;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSeat, setEditingSeat] = useState<Seat | null>(null);
   const [formData, setFormData] = useState<Omit<Seat, 'id'> & { flightId: number }>({
@@ -176,6 +178,16 @@ export default function AdminSeats() {
     return matchesSearch && matchesClass;
   });
 
+  // Calculate pagination
+  const indexOfLastSeat = currentPage * seatsPerPage;
+  const indexOfFirstSeat = indexOfLastSeat - seatsPerPage;
+  const currentSeats = filteredSeats.slice(indexOfFirstSeat, indexOfLastSeat);
+  const totalPages = Math.ceil(filteredSeats.length / seatsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
   const getClassBadge = (seatClass: string) => {
     const variants = {
       ECONOMY: 'default',
@@ -276,7 +288,7 @@ export default function AdminSeats() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSeats.map((seat) => (
+                {currentSeats.map((seat) => (
                   <TableRow key={seat.id}>
                     <TableCell className="font-medium">
                       {seat.seatNumber}
@@ -319,6 +331,41 @@ export default function AdminSeats() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-500">
+              Showing {indexOfFirstSeat + 1} to {Math.min(indexOfLastSeat, filteredSeats.length)} of {filteredSeats.length} seats
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index + 1}
+                  variant={currentPage === index + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

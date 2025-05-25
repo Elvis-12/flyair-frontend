@@ -19,6 +19,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [temporaryToken, setTemporaryToken] = useState<string | null>(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -32,7 +33,10 @@ export default function Login() {
 
     try {
       if (requiresTwoFactor) {
-        const response = await apiService.verify2FA(formData.twoFactorCode);
+        const response = await apiService.verify2FA({
+          temporaryToken: temporaryToken as string,
+          code: formData.twoFactorCode
+        });
         if (response.data.success) {
           const authResponse = response.data.data;
           login(authResponse.accessToken, authResponse.user);
@@ -54,6 +58,7 @@ export default function Login() {
           
           if (authResponse.requiresTwoFactor) {
             setRequiresTwoFactor(true);
+            setTemporaryToken(authResponse.temporaryToken);
             toast({
               title: 'Two-Factor Authentication Required',
               description: 'Please enter your 2FA code to complete login.',

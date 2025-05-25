@@ -47,8 +47,8 @@ class ApiService {
     return api.post<ApiResponse<AuthenticationResponse>>('/auth/login', credentials);
   }
 
-  async verify2FA(code: string) {
-    return api.post<ApiResponse<AuthenticationResponse>>('/auth/verify-2fa', { code });
+  async verify2FA(data: { temporaryToken: string; code: string }) {
+    return api.post<ApiResponse<AuthenticationResponse>>('/auth/verify-2fa', data);
   }
 
   async register(userData: any) {
@@ -62,10 +62,10 @@ class ApiService {
     });
   }
 
-  async resetPassword(token: string, password: string) {
+  async resetPassword(token: string, newPassword: string) {
     return this.request<{ message: string }>('/api/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ token, newPassword }),
     });
   }
 
@@ -204,9 +204,8 @@ class ApiService {
   }
 
   async confirm2FA(code: string) {
-    return this.request<{ message: string }>('/api/users/confirm-2fa', {
+    return this.request<{ message: string }>(`/api/users/confirm-2fa?code=${encodeURIComponent(code)}`, {
       method: 'POST',
-      body: JSON.stringify({ code }),
     });
   }
 

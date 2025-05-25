@@ -14,7 +14,9 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Booking } from '@/types';
 import {
@@ -34,6 +36,8 @@ export default function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const bookingsPerPage = 4;
 
   useEffect(() => {
     loadBookings();
@@ -90,6 +94,16 @@ export default function MyBookings() {
     booking.flight?.arrivalAirport?.airportName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     booking.passengerName?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Calculate pagination
+  const indexOfLastBooking = currentPage * bookingsPerPage;
+  const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage;
+  const currentBookings = filteredBookings.slice(indexOfFirstBooking, indexOfLastBooking);
+  const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusIcon = (status: Booking['status']) => {
     switch (status) {
@@ -155,7 +169,7 @@ export default function MyBookings() {
       {/* Bookings List */}
       {filteredBookings.length > 0 ? (
         <div className="space-y-4">
-          {filteredBookings.map((booking) => (
+          {currentBookings.map((booking) => (
             <Card key={booking.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -278,6 +292,43 @@ export default function MyBookings() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstBooking + 1} to {Math.min(indexOfLastBooking, filteredBookings.length)} of {filteredBookings.length} bookings
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {[...Array(totalPages)].map((_, index) => (
+                  <Button
+                    key={index + 1}
+                    variant={currentPage === index + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(index + 1)}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card>
