@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
+import { apiService } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   loading: boolean;
+  updateUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,7 +75,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout,
       isAuthenticated,
       isAdmin: user?.role === 'ADMIN',
-      loading
+      loading,
+      updateUser: async () => {
+        console.log('updateUser function called');
+        if (!token) {
+          console.warn('updateUser called without token');
+          return; // Cannot fetch user if no token
+        }
+        try {
+          const response = await apiService.getUserProfile();
+          if (response.data.success && response.data.data) {
+            setUser(response.data.data);
+            localStorage.setItem('authUser', JSON.stringify(response.data.data));
+            console.log('User data updated successfully', response.data.data);
+          } else {
+            console.error('Failed to fetch updated user data:', response.data.message);
+            // Optionally handle cases where user data fetch fails after a successful action
+            // e.g., force logout if the user no longer exists or token is invalid
+          }
+        } catch (error) {
+          console.error('Error fetching updated user data:', error);
+          // Handle network errors or other unexpected issues
+        }
+      }
     }}>
       {children}
     </AuthContext.Provider>
