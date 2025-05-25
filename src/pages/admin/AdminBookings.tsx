@@ -78,8 +78,8 @@ export default function AdminBookings() {
   };
 
   const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = booking.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.flight.flightNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (booking.passengerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (booking.flight?.flightNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -183,7 +183,7 @@ export default function AdminBookings() {
                 {filteredBookings.map((booking) => (
                   <TableRow key={booking.id}>
                     <TableCell className="font-mono text-sm">
-                      {booking.id.substring(0, 8)}...
+                      {String(booking.id).substring(0, 8)}...
                     </TableCell>
                     <TableCell>
                       <div>

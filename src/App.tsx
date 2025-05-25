@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Index from "./pages/Index";
 
 // Protected pages
 import Dashboard from "./pages/Dashboard";
@@ -48,7 +49,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Protected routes */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout>

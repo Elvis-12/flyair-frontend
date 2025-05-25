@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,7 +36,7 @@ export default function Dashboard() {
           const bookingsResponse = await apiService.getMyBookings();
           if (bookingsResponse.success) {
             // Filter for upcoming flights
-            const upcoming = bookingsResponse.data.filter(
+            const upcoming = bookingsResponse.data.content.filter(
               booking => new Date(booking.flight.departureTime) > new Date()
             ).slice(0, 3);
             setUpcomingBookings(upcoming);
@@ -142,7 +141,7 @@ export default function Dashboard() {
                     <div>
                       <p className="font-medium">{booking.passengerName}</p>
                       <p className="text-sm text-gray-600">
-                        {booking.flight.departureAirport} → {booking.flight.arrivalAirport}
+                        {booking.flight.departureAirport?.airportCode} → {booking.flight.arrivalAirport?.airportCode}
                       </p>
                     </div>
                     <div className="text-right">
@@ -282,7 +281,7 @@ export default function Dashboard() {
                   <div className="space-y-1">
                     <p className="font-medium">{booking.flight.flightNumber}</p>
                     <p className="text-sm text-gray-600">
-                      {booking.flight.departureAirport} → {booking.flight.arrivalAirport}
+                      {booking.flight.departureAirport?.airportCode} → {booking.flight.arrivalAirport?.airportCode}
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(booking.flight.departureTime).toLocaleDateString()} at{' '}

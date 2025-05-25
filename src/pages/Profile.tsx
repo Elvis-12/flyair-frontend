@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
@@ -42,7 +41,8 @@ export default function Profile() {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    phone: user?.phone || ''
+    phoneNumber: user?.phone || '',
+    username: user?.username || ''
   });
 
   // Password State
@@ -66,7 +66,7 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const response = await apiService.updateUser(user.id, personalInfo);
+      const response = await apiService.updateUser(String(user.id), personalInfo);
       if (response.success) {
         toast({
           title: 'Profile Updated',
@@ -231,8 +231,8 @@ export default function Profile() {
                   <Input
                     id="phone"
                     type="tel"
-                    value={personalInfo.phone}
-                    onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
+                    value={personalInfo.phoneNumber}
+                    onChange={(e) => setPersonalInfo({ ...personalInfo, phoneNumber: e.target.value })}
                     placeholder="Optional"
                   />
                 </div>

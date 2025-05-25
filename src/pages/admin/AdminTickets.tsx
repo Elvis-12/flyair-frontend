@@ -206,7 +206,7 @@ export default function AdminTickets() {
                 {filteredTickets.map((ticket) => (
                   <TableRow key={ticket.id}>
                     <TableCell className="font-mono text-sm">
-                      {ticket.id.substring(0, 8)}...
+                      {String(ticket.id).substring(0, 8)}...
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{ticket.passengerName}</div>
@@ -215,7 +215,7 @@ export default function AdminTickets() {
                       {ticket.seatNumber}
                     </TableCell>
                     <TableCell>
-                      {ticket.booking.flight.flightNumber}
+                      {ticket.flightSeat?.flight?.flightNumber}
                     </TableCell>
                     <TableCell>
                       {ticket.checkInTime 
@@ -230,8 +230,8 @@ export default function AdminTickets() {
                       }
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadge(ticket.status)}>
-                        {ticket.status}
+                      <Badge variant={getStatusBadge(ticket.ticketStatus)}>
+                        {ticket.ticketStatus}
                       </Badge>
                     </TableCell>
                     <TableCell>
