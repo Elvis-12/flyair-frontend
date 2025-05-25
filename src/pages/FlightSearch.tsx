@@ -199,8 +199,13 @@ export default function FlightSearch() {
             </div>
             <Badge className={getStatusColor(flight.status)}>{flight.status}</Badge>
         </div>
-        <p className="text-sm text-gray-500 mt-2">Flight Number: {flight.flightNumber}</p>
-        <p className="text-sm text-gray-500">Duration: {flight.durationMinutes} minutes</p>
+        <div className="mt-2 text-sm text-gray-700">
+            <p>Flight Number: {flight.flightNumber}</p>
+            <p>Duration: {flight.duration} minutes</p>
+        </div>
+        <div className="mt-4 text-right">
+            <Button onClick={() => handleBookFlight(flight)}>Book Flight</Button>
+        </div>
      </div>
   );
 
